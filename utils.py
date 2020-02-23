@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import random, os
 
-def get_paths(benign_dir="benny_nas/PE_binary_dataset/Benign/", malicious_dir="benny_nas/PE_binary_dataset/Virus/"):
+def get_paths(benign_dir="../benny_nas/PE_binary_dataset/Benign/", malicious_dir="../benny_nas/PE_binary_dataset/Virus/"):
     """
     output [(exe_path, label), (exe_path, label)...]
     """
