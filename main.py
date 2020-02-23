@@ -66,7 +66,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=3, save=None, \
     # fps_train, y_train = utils.split_to_files_and_labels(train_set)
     # fps_dev, y_dev = utils.split_to_files_and_labels(dev_set)
 
-
+    # print(train_set[1])
     # transfer data to DataLoader object
     train_loader = DataLoader(PE_Dataset(train_set, first_n_byte),
                             batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -79,10 +79,13 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=3, save=None, \
     total_loss = 0.0
     total_step = 0
 
-
+    history = {'loss':[],'acc':[],'val_loss':[],'val_acc':[]}
     for epoch in range(num_epochs):
-        t0 = time()
-        good = 0.0
+        epoch_loss = 0
+        epoch_acc = 0
+        valid_acc = 0
+        valid_acc = 0
+
         model.train()
 
         for batch_data, label in train_loader:
@@ -96,25 +99,42 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=3, save=None, \
             print(label)
             
             loss = criterion(output, label)
-            total_loss += loss
             loss.backward()
             adam_optim.step()
+            epoch_loss += loss
             preds = (output>0.5).float()
             print(preds)
 
-            # TODO check if this way of summing works
-            good += (label == preds).sum()
-            print(good)
+            epoch_acc += torch.sum(label == preds)
             total_step += 1
-        train_acc = good / len(label)
-        avg_loss_train = total_loss / len(label)
-        # val_acc, time_dev = validate_dev_set(val_loader, model, device, len(y_dev))
-        # print('{} train-time: {:.2f} train-acc: {:.4f} train-loss: {:.5f} dev-time: {:.2f} dev-acc: {:.4f}'.format(
-        #     epoch, time() - t0, acc_train, avg_loss_train, time_dev, acc_dev
-        # ))
-        print(train_acc)
-        # TODO CHECK IF TO ADD LOG
-        # log.write('{:.4f},{:.5f},{:.4f}\n'.format(acc_train, avg_loss_train, acc_dev))
+
+        model.eval()
+        with torch.no_grad():
+            valid_acc = 0
+            valid_loss = 0
+            for batch_data, label in val_loader:
+                if device is not None:
+                    batch_data, label = batch_data.to(device), label.to(device)
+
+                adam_optim.zero_grad()
+                output = model(batch_data)
+                loss = criterion(output, label)
+                #_, preds = torch.max(output_label.data, 1)
+                valid_loss += loss
+                preds = (output>0.5).float()
+                valid_acc += torch.sum(preds == label)
+            print('[ (%d ) Loss:  %.3f, train_Acc: %.5f, valid_Loss: %.3f, valid_Acc: %.5f]' %\
+                    (epoch, epoch_loss/len(train_loader), \
+                    float(epoch_acc) / len(train_loader) / batch_size,\
+                    valid_loss/len(val_loader),\
+                    float(valid_acc) / len(val_loader) / batch_size))
+
+            history['loss'].append(epoch_loss/len(train_loader))
+            history['acc'].append(float(epoch_acc) / len(train_loader)/ batch_size)
+            history['val_loss'].append(valid_loss/len(val_loader))
+            history['val_acc'].append(float(valid_acc)/len(val_loader)/ batch_size)
+            # log.write('{:.4f},{:.5f},{:.4f}\n'.format(acc_train, avg_loss_train, acc_dev))
+    torch.save(model.state_dict(), './model_{}.pkl'.format(num_epochs))
 
 
 if __name__ == '__main__':

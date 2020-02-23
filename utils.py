@@ -28,8 +28,10 @@ def get_paths(benign_dir="benny_nas/PE_binary_dataset/Benign/", malicious_dir="b
     # train_data = list(zip(train_bin, train_label))
 
     benign_filenames = [(benign_dir + f, 0.0) for f in os.listdir(benign_dir)]
-    malicious_filenames = [(malicious_dir + f, 1.0) for f in os.listdir(malicious_dir)]
-    filenames = benign_filenames + malicious_filenames
+    filenames = benign_filenames
+    for malicious_subdir in malicious_dir:
+        malicious_filenames = [(malicious_dir + malicious_subdir + "/" + f, 1.0) for f in os.listdir(malicious_dir+malicious_subdir)]
+        filenames += malicious_filenames
     random.shuffle(filenames)
     # print(filenames)
     
