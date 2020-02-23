@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 from torch import tensor
-
+import struct, binascii
 class PE(Dataset):
     def __init__(self, fp_list, first_n_byte=2000000):
         """
@@ -21,27 +21,29 @@ class PE(Dataset):
         :param bytes_str: string of bytes, i.e. two characters, each is one of 0-f.
         :return: integer, number between 0 to 257.
         """
+        
         if bytes_str == '??':  # ignore those signs
             return 0
         return int(bytes_str, 16) + 1
+        # return struct.unpack("h", bytes_str)[0] + 1
 
     def __getitem__(self, idx):
         with open(self.fp_list[idx][0], 'rb') as f:
-            tmp = []
-            for line in f:
-                line = line.split()
-                line.pop(0)  # ignore address
 
-                line = map(PE_Dataset.represent_bytes, line)
-                tmp.extend(line)
+            # print(self.first_n_byte)
+            byte = f.read(self.first_n_byte)
+            hexadecimal = binascii.hexlify(byte)
+            hexadecimal = [hexadecimal[i:i+2] for i in range(0, len(hexadecimal), 2)]
+            tmp = list(map(PE_Dataset.represent_bytes, hexadecimal))
 
             # padding with zeroes such that all files will be of the same size
             if len(tmp) > self.first_n_byte:
                 tmp = tmp[:self.first_n_byte]
             else:
                 tmp = tmp + [0] * (self.first_n_byte - len(tmp))
+            # print(len(tmp))
         f.close()
-        return tensor(tmp)
+        return tensor(tmp), tensor(self.fp_list[idx][1])
 
 
 class PE_Dataset(PE):
@@ -53,6 +55,6 @@ class PE_Dataset(PE):
         super(PE_Dataset, self).__init__(fp_list, first_n_byte)
 
     def __getitem__(self, idx):
-        x = super(PE_Dataset, self).__getitem__(idx)[0] 
-        label = super(PE_Dataset, self).__getitem__(idx)[1]
-        return x, label
+        x, label = super(PE_Dataset, self).__getitem__(idx)
+        # print(label)
+        return x, tensor([label])

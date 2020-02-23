@@ -86,29 +86,33 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=3, save=None, \
         model.train()
 
         for batch_data, label in train_loader:
+            # print(batch_data.shape)
+            # print(label.shape)
             adam_optim.zero_grad()
 
             if device is not None:
                 batch_data, label = batch_data.to(device), label.to(device)
-            pred = model(batch_data)
-
-            loss = criterion(pred, label)
+            output = model(batch_data)
+            print(label)
+            
+            loss = criterion(output, label)
             total_loss += loss
             loss.backward()
             adam_optim.step()
+            preds = (output>0.5).float()
+            print(preds)
 
-            gold_label = label.data
             # TODO check if this way of summing works
-            pred_label = torch.max(pred, 1)[1].data
-            good += (gold_label == pred_label).sum()
-
+            good += (label == preds).sum()
+            print(good)
             total_step += 1
-        acc_train = good / len(y_train)
-        avg_loss_train = total_loss / len(y_train)
-        acc_dev, time_dev = validate_dev_set(val_loader, model, device, len(y_dev))
-        print('{} train-time: {:.2f} train-acc: {:.4f} train-loss: {:.5f} dev-time: {:.2f} dev-acc: {:.4f}'.format(
-            epoch, time() - t0, acc_train, avg_loss_train, time_dev, acc_dev
-        ))
+        train_acc = good / len(label)
+        avg_loss_train = total_loss / len(label)
+        # val_acc, time_dev = validate_dev_set(val_loader, model, device, len(y_dev))
+        # print('{} train-time: {:.2f} train-acc: {:.4f} train-loss: {:.5f} dev-time: {:.2f} dev-acc: {:.4f}'.format(
+        #     epoch, time() - t0, acc_train, avg_loss_train, time_dev, acc_dev
+        # ))
+        print(train_acc)
         # TODO CHECK IF TO ADD LOG
         # log.write('{:.4f},{:.5f},{:.4f}\n'.format(acc_train, avg_loss_train, acc_dev))
 
