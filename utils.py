@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import random, os
 
-def get_paths(benign_dir="../benny_nas/PE_binary_dataset/Benign/", malicious_dir="../benny_nas/PE_binary_dataset/Virus/"):
+def get_paths(benign_dir="../PE_binary_dataset/Benign/", malicious_dir="../PE_binary_dataset/Virus/"):
     """
     output [(exe_path, label), (exe_path, label)...]
     """
@@ -29,7 +29,7 @@ def get_paths(benign_dir="../benny_nas/PE_binary_dataset/Benign/", malicious_dir
 
     benign_filenames = [(benign_dir + f, 0.0) for f in os.listdir(benign_dir)]
     filenames = benign_filenames
-    for malicious_subdir in malicious_dir:
+    for malicious_subdir in os.listdir(malicious_dir):
         malicious_filenames = [(malicious_dir + malicious_subdir + "/" + f, 1.0) for f in os.listdir(malicious_dir+malicious_subdir)]
         filenames += malicious_filenames
     random.shuffle(filenames)

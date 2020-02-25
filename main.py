@@ -57,7 +57,7 @@ if args.cuda:
 print(args)
 
 
-def train(lr=1e-3, first_n_byte=2000000, num_epochs=3, save=None, \
+def train(lr=1e-3, first_n_byte=2000000, num_epochs=50, save=None, \
              batch_size=32, num_workers=0, show_matrix=False):
     model = model_MalConv.MalConv()
     device = utils.model_to_cuda(model)
@@ -96,15 +96,15 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=3, save=None, \
             if device is not None:
                 batch_data, label = batch_data.to(device), label.to(device)
             output = model(batch_data)
-            print(label)
+            #print(label)
             
             loss = criterion(output, label)
             loss.backward()
             adam_optim.step()
             epoch_loss += loss
             preds = (output>0.5).float()
-            print(preds)
-
+            #print(preds)
+            print(loss)
             epoch_acc += torch.sum(label == preds)
             total_step += 1
 
