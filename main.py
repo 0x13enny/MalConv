@@ -138,8 +138,8 @@ def get_DC(SR,GT,threshold=0.5):
 
     return DC
 
-def train(lr=1e-3, first_n_byte=2000000, num_epochs=50, save=None, \
-             batch_size=32, num_workers=0, show_matrix=False):
+def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
+             batch_size=64, num_workers=2, show_matrix=False):
     model = model_MalConv.MalConv()
     device = utils.model_to_cuda(model)
 
@@ -183,17 +183,21 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=50, save=None, \
             loss.backward()
             adam_optim.step()
             epoch_loss += loss
+            preds = (output>0.5).float()
             
-            print(get_sensitivity(output, label))
-            print(get_specificity(output, label))
-            # preds = (output>0.5).float()
-            # epoch_acc += torch.sum(label == preds)
+            #print(get_sensitivity(output, label))
+            #print(get_specificity(output, label))
+            epoch_acc += torch.sum(label == preds)
 
 
             total_step += 1
 
         model.eval()
         with torch.no_grad():
+            TP = 0
+            TN = 0
+            FP = 0
+            FN = 0
             valid_acc = 0
             valid_loss = 0
             for batch_data, label in val_loader:
@@ -207,6 +211,13 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=50, save=None, \
                 valid_loss += loss
                 preds = (output>0.5).float()
                 valid_acc += torch.sum(preds == label)
+                preds = preds > 0.5
+                label = label == torch.max(label)
+                TP += torch.sum(((preds==1).int()+(label==1).int())==2)
+                FN += torch.sum(((preds==0).int()+(label==1).int())==2)
+                TN += torch.sum(((preds==0).int()+(label==0).int())==2)
+                FP += torch.sum(((preds==1).int()+(label==0).int())==2)
+            print("TP:%d, TN:%d, FP:%d, FN:%d"%(TP, TN, FP,FN))
             print('[ (%d ) Loss:  %.3f, train_Acc: %.5f, valid_Loss: %.3f, valid_Acc: %.5f]' %\
                     (epoch, epoch_loss/len(train_loader), \
                     float(epoch_acc) / len(train_loader) / batch_size,\
