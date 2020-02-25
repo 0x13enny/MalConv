@@ -155,8 +155,9 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
                              batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     criterion = nn.BCEWithLogitsLoss()
-    adam_optim = torch.optim.Adam(model.parameters(), lr)
-
+    optimizer = torch.optim.SparseAdam(model.parameters(), lr)
+    # optimizer = torch.optim.optim.SGD(model.parameters(), lr)
+    
     total_loss = 0.0
     total_step = 0
 
@@ -172,7 +173,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
         for batch_data, label in train_loader:
             # print(batch_data.shape)
             # print(label.shape)
-            adam_optim.zero_grad()
+            optimizer.zero_grad()
 
             if device is not None:
                 batch_data, label = batch_data.to(device), label.to(device)
@@ -181,7 +182,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             
             loss = criterion(output, label)
             loss.backward()
-            adam_optim.step()
+            optimizer.step()
             epoch_loss += loss
             preds = (output>0.5).float()
             
@@ -204,7 +205,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
                 if device is not None:
                     batch_data, label = batch_data.to(device), label.to(device)
 
-                adam_optim.zero_grad()
+                optimizer.zero_grad()
                 output = model(batch_data)
                 loss = criterion(output, label)
                 #_, preds = torch.max(output_label.data, 1)
