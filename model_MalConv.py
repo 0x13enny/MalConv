@@ -23,6 +23,7 @@ class MalConv(nn.Module):
         self.dropout = nn.Dropout(p=0.3)
 
         self.sigmoid = nn.Sigmoid()
+        self.softmax = nn.Softmax()
         # self.i2l = {i: l for i, l in enumerate(labels)}
         # self.l2i = {l: i for i, l in self.i2l.iteritems()}
 
