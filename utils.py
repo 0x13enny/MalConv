@@ -46,7 +46,7 @@ def model_to_cuda(model):
     
     device = None
     if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-        device = torch.device("cuda:0")
+        device = torch.device("cuda:1")
         model = nn.DataParallel(model)
         model.to(device)
     return device

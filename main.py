@@ -139,7 +139,7 @@ def get_DC(SR,GT,threshold=0.5):
     return DC
 
 def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
-             batch_size=64, num_workers=2, show_matrix=False):
+             batch_size=16, num_workers=2, show_matrix=False):
     model = model_MalConv.MalConv()
     device = utils.model_to_cuda(model)
 
@@ -155,8 +155,8 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
                              batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.SparseAdam(model.parameters(), lr)
-    # optimizer = torch.optim.optim.SGD(model.parameters(), lr)
+    #optimizer = torch.optim.SparseAdam(model.parameters(), lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr)
     
     total_loss = 0.0
     total_step = 0

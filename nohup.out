@@ -1,0 +1,11 @@
+Namespace(all_use='no', batch_size=128, checkpoint_dir='checkpoint', cuda=True, eval_only=False, lr=0.0002, max_epoch=200, no_cuda=False, num_k=4, one_step=False, optimizer='adam', resume_epoch=100, save_epoch=10, save_model=False, seed=1, source='object', target='mnist_style_object', use_abs_diff=False)
+TP:1783, TN:171, FP:23, FN:17
+[ (0 ) Loss:  0.382, train_Acc: 0.94802, valid_Loss: 0.361, valid_Acc: 0.97700]
+TP:1786, TN:166, FP:28, FN:14
+[ (1 ) Loss:  0.361, train_Acc: 0.98096, valid_Loss: 0.362, valid_Acc: 0.97600]
+TP:1787, TN:169, FP:25, FN:13
+[ (2 ) Loss:  0.359, train_Acc: 0.98572, valid_Loss: 0.360, valid_Acc: 0.97800]
+TP:1794, TN:155, FP:39, FN:6
+[ (3 ) Loss:  0.358, train_Acc: 0.98647, valid_Loss: 0.364, valid_Acc: 0.97450]
+TP:1786, TN:171, FP:23, FN:14
+[ (4 ) Loss:  0.359, train_Acc: 0.98597, valid_Loss: 0.360, valid_Acc: 0.97850]
