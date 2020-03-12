@@ -54,7 +54,7 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
-print(args)
+# print(args)
 
 
 
@@ -141,17 +141,22 @@ def get_DC(SR,GT,threshold=0.5):
 def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
              batch_size=16, num_workers=2, show_matrix=False):
     model = model_MalConv.MalConv()
+    # print(model.summary())
     device = utils.model_to_cuda(model)
 
-    train_set, val_set = utils.get_paths()
+    # if split:
+    train_set, test_set = utils.gen_paths()
+    # else:
+    #     train_set, test_set = # load file labels/test_path.csv 
     # fps_train, y_train = utils.split_to_files_and_labels(train_set)
     # fps_dev, y_dev = utils.split_to_files_and_labels(dev_set)
 
-    # print(train_set[1])
     # transfer data to DataLoader object
-    train_loader = DataLoader(PE_Dataset(train_set, first_n_byte),
+    train_loader = DataLoader(PE_Dataset(train_set[:int(len(train_set)*4/5)], first_n_byte),
                             batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(PE_Dataset(val_set, first_n_byte),
+    val_loader = DataLoader(PE_Dataset(train_set[int(len(train_set)*4/5):], first_n_byte),
+                            batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    test_loader = DataLoader(PE_Dataset(test_set, first_n_byte),
                              batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     criterion = nn.BCEWithLogitsLoss()
@@ -231,6 +236,18 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             history['val_acc'].append(float(valid_acc)/len(val_loader)/ batch_size)
             # log.write('{:.4f},{:.5f},{:.4f}\n'.format(acc_train, avg_loss_train, acc_dev))
     torch.save(model.state_dict(), './model_{}.pkl'.format(num_epochs))
+
+def test_model(config_file, model, device):
+
+    
+    model.eval()
+    with torch.no_grad():
+        for idx,(data) in enumerate(test_loader):
+            # data, label = data.to(device), label.to(device)
+            data = data.to(device)
+            output = model(data)
+            # loss = F.cross_entropy(output, label)
+            predict = torch.max(output, 1)[1]
 
 
 if __name__ == '__main__':
