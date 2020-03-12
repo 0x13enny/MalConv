@@ -11,7 +11,7 @@ from dataset import PE, PE_Dataset
 import model_MalConv
 import utils
 from sklearn.metrics import confusion_matrix
-
+from torchsummary import summary
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MCD Implementation')
 parser.add_argument('--all_use', type=str, default='no', metavar='N',
@@ -142,7 +142,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
              batch_size=16, num_workers=2, show_matrix=False):
     model = model_MalConv.MalConv()
     device = utils.model_to_cuda(model)
-
+    summary(model, ( first_n_byte))
     train_set, val_set = utils.get_paths()
     # fps_train, y_train = utils.split_to_files_and_labels(train_set)
     # fps_dev, y_dev = utils.split_to_files_and_labels(dev_set)
@@ -171,7 +171,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
         model.train()
 
         for batch_data, label in train_loader:
-            # print(batch_data.shape)
+            print((batch_data.shape))
             # print(label.shape)
             optimizer.zero_grad()
 
