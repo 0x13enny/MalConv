@@ -3,29 +3,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import random, os
+import pandas as pd
 
-def get_paths(benign_dir="../PE_binary_dataset/Benign/", malicious_dir="../PE_binary_dataset/Virus/"):
+def gen_paths(benign_dir="../PE_binary_dataset/Benign/", malicious_dir="../PE_binary_dataset/Virus/"):
     """
     output [(exe_path, label), (exe_path, label)...]
     """
-
-    # P = "benny_nas/PE_binary_dataset/Benign/"
-    # for filename in os.listdir(P):
-    #     if os.path.isfile(P+filename) and filename.endswith(".exe"):            # and not filename in files:
-    #         with open(P+filename, "rb") as f:
-    #             train_bin_benign.append(f.read()[:])
-    # benign_label = np.zeros(len(train_bin_benign)).tolist()
-    
-    
-    # P = "benny_nas/PE_binary_dataset/Virus/"
-    # for filename in os.listdir(P):
-    #     if os.path.isfile(P+filename) and filename.endswith(".exe"):            # and not filename in files:
-    #         with open(P+filename, "rb") as f:
-    #             train_bin_malicious.append(f.read()[:])
-    # malicious_label = np.ones(len(train_bin_malicious)).tolist()
-    # train_bin = train_bin_benign + train_bin_malicious
-    # train_label = benign_label + malicious_label
-    # train_data = list(zip(train_bin, train_label))
 
     benign_filenames = [(benign_dir + f, 0.0) for f in os.listdir(benign_dir)]
     filenames = benign_filenames
@@ -33,11 +16,15 @@ def get_paths(benign_dir="../PE_binary_dataset/Benign/", malicious_dir="../PE_bi
         malicious_filenames = [(malicious_dir + malicious_subdir + "/" + f, 1.0) for f in os.listdir(malicious_dir+malicious_subdir)]
         filenames += malicious_filenames
     random.shuffle(filenames)
-    # print(filenames)
-    
 
-    train_set_file = filenames[:int(len(filenames)*4/5)]
-    valid_set_file = filenames[int(len(filenames)*4/5):]
+
+    train_set_file = filenames[:int(len(filenames)*9/10)]
+    valid_set_file = filenames[int(len(filenames)*9/10):]
+    train_path = pd.DataFrame(train_set_file, columns=["path"])
+    train_path.to_csv('labels/train_path.csv', index=False)
+    test_path = pd.DataFrame(valid_set_file, columns=["path"])
+    test_path.to_csv('labels/test_path.csv', index=False)
+
     return train_set_file, valid_set_file
 
 
