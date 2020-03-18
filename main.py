@@ -11,7 +11,7 @@ from dataset import PE, PE_Dataset
 import model_MalConv
 import utils
 from sklearn.metrics import confusion_matrix
-
+from torchsummary import summary
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MCD Implementation')
 parser.add_argument('--all_use', type=str, default='no', metavar='N',
@@ -112,7 +112,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
         model.train()
 
         for batch_data, label in train_loader:
-            # print(batch_data.shape)
+            print((batch_data.shape))
             # print(label.shape)
             optimizer.zero_grad()
 
