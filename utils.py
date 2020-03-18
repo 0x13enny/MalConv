@@ -20,9 +20,9 @@ def gen_paths(benign_dir="../PE_binary_dataset/Benign/", malicious_dir="../PE_bi
 
     train_set_file = filenames[:int(len(filenames)*9/10)]
     valid_set_file = filenames[int(len(filenames)*9/10):]
-    train_path = pd.DataFrame(train_set_file, columns=["path"])
+    train_path = pd.DataFrame(train_set_file, columns=["path","label"])
     train_path.to_csv('labels/train_path.csv', index=False)
-    test_path = pd.DataFrame(valid_set_file, columns=["path"])
+    test_path = pd.DataFrame(valid_set_file, columns=["path","label"])
     test_path.to_csv('labels/test_path.csv', index=False)
 
     return train_set_file, valid_set_file
