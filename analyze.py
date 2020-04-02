@@ -29,4 +29,3 @@ plt.figure(2)
 plt.hist(malicious_len)
 plt.savefig('malicious.png',label="benign file size (MB)")
 
-

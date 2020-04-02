@@ -41,80 +41,16 @@ parser.add_argument('--save_model', action='store_true', default=False,
                     help='save_model or not')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-
-
 parser.add_argument('--source', type=str, default='object', metavar='N',
                     help='source dataset')
 
-parser.add_argument('--target', type=str, default='mnist_style_object', metavar='N', help='target dataset')
-parser.add_argument('--use_abs_diff', action='store_true', default=False,
-                    help='use absolute difference value as a measurement')
+
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
-# print(args)
 
-
-
-def get_accuracy(SR,GT,threshold=0.5):
-    SR = SR > threshold
-    GT = GT == torch.max(GT)
-    corr = torch.sum(SR==GT)
-    tensor_size = SR.size(0)*SR.size(1)*SR.size(2)*SR.size(3)
-    acc = float(corr)/float(tensor_size)
-
-    return acc
-
-def get_sensitivity(SR,GT,threshold=0.5):
-    # Sensitivity == Recall
-    SR = SR > threshold
-    GT = GT == torch.max(GT)
-
-    # TP : True Positive
-    # FN : False Negative
-    TP = ((SR==1)+(GT==1))==2
-    FN = ((SR==0)+(GT==1))==2
-
-    SE = float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6)     
-    
-    return SE
-
-def get_specificity(SR,GT,threshold=0.5):
-    SR = SR > threshold
-    GT = GT == torch.max(GT)
-
-    # TN : True Negative
-    # FP : False Positive
-    TN = ((SR==0)+(GT==0))==2
-    FP = ((SR==1)+(GT==0))==2
-
-    SP = float(torch.sum(TN))/(float(torch.sum(TN+FP)) + 1e-6)
-    
-    return SP
-
-def get_precision(SR,GT,threshold=0.5):
-    SR = SR > threshold
-    GT = GT == torch.max(GT)
-
-    # TP : True Positive
-    # FP : False Positive
-    TP = ((SR==1)+(GT==1))==2
-    FP = ((SR==1)+(GT==0))==2
-
-    PC = float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6)
-
-    return PC
-
-def get_F1(SR,GT,threshold=0.5):
-    # Sensitivity == Recall
-    SE = get_sensitivity(SR,GT,threshold=threshold)
-    PC = get_precision(SR,GT,threshold=threshold)
-
-    F1 = 2*SE*PC/(SE+PC + 1e-6)
-
-    return F1
 
 def get_JS(SR,GT,threshold=0.5):
     # JS : Jaccard similarity
@@ -223,7 +159,14 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
                 FN += torch.sum(((preds==0).int()+(label==1).int())==2)
                 TN += torch.sum(((preds==0).int()+(label==0).int())==2)
                 FP += torch.sum(((preds==1).int()+(label==0).int())==2)
+            
+            SE = float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6)   
+            PC = float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6)
+            SP = float(torch.sum(TN))/(float(torch.sum(TN+FP)) + 1e-6)
+            F1 = 2*SE*PC/(SE+PC + 1e-6)
+
             print("TP:%d, TN:%d, FP:%d, FN:%d"%(TP, TN, FP,FN))
+            print("Sensitivity:%d,\n Precision:%d,\n Specificity:%d,\n F1:%d"%(SE, PC, SP,F1))
             print('[ (%d ) Loss:  %.3f, train_Acc: %.5f, valid_Loss: %.3f, valid_Acc: %.5f]' %\
                     (epoch, epoch_loss/len(train_loader), \
                     float(epoch_acc) / len(train_loader) / batch_size,\
@@ -239,6 +182,12 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
 
 def test_model(config_file, model, device):
 
+    if os.path.exists('malconv.pkl'):
+        print("restoring malconv.pkl from disk for continuation training...")
+        from keras.models import load_model
+        basemodel = load_model('malconv.pkl')
+        _, maxlen, embedding_size = basemodel.layers[1].output_shape
+        input_dim
     
     model.eval()
     with torch.no_grad():
