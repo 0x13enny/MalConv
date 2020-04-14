@@ -5,7 +5,7 @@ import torch.nn as nn
 import random, os
 import pandas as pd
 
-def gen_paths(benign_dir="../PE_binary_dataset/Benign/", malicious_dir="../PE_binary_dataset/Virus/"):
+def gen_paths(benign_dir="../Benign/", malicious_dir="../Malware/"):
     """
     output [(exe_path, label), (exe_path, label)...]
     """

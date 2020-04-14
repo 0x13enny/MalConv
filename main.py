@@ -12,37 +12,8 @@ import model_MalConv
 import utils
 from sklearn.metrics import confusion_matrix
 from torchsummary import summary
-# Training settings
-parser = argparse.ArgumentParser(description='PyTorch MCD Implementation')
-parser.add_argument('--all_use', type=str, default='no', metavar='N',
-                    help='use all training data? in usps adaptation')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
-                    help='input batch size for training (default: 64)')
-parser.add_argument('--checkpoint_dir', type=str, default='checkpoint', metavar='N',
-                    help='source only or not')
-parser.add_argument('--eval_only', action='store_true', default=False,
-                    help='evaluation only option')
-parser.add_argument('--lr', type=float, default=0.0002, metavar='LR',
-                    help='learning rate (default: 0.0002)')
-parser.add_argument('--max_epoch', type=int, default=200, metavar='N',
-                    help='how many epochs')
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='disables CUDA training')
-parser.add_argument('--num_k', type=int, default=4, metavar='N',
-                    help='hyper paremeter for generator update')
-parser.add_argument('--one_step', action='store_true', default=False,
-                    help='one step training with gradient reversal layer')
-parser.add_argument('--optimizer', type=str, default='adam', metavar='N', help='which optimizer')
-parser.add_argument('--resume_epoch', type=int, default=100, metavar='N',
-                    help='epoch to resume')
-parser.add_argument('--save_epoch', type=int, default=10, metavar='N',
-                    help='when to restore the model')
-parser.add_argument('--save_model', action='store_true', default=False,
-                    help='save_model or not')
-parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='random seed (default: 1)')
-parser.add_argument('--source', type=str, default='object', metavar='N',
-                    help='source dataset')
+import matplotlib.pyplot as plt
+
 
 
 args = parser.parse_args()
@@ -103,6 +74,9 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     total_step = 0
 
     history = {'loss':[],'acc':[],'val_loss':[],'val_acc':[]}
+    TPR_history = []
+    FPR_history = []
+    Precision_history = []
     for epoch in range(num_epochs):
         epoch_loss = 0
         epoch_acc = 0
@@ -160,11 +134,15 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
                 TN += torch.sum(((preds==0).int()+(label==0).int())==2)
                 FP += torch.sum(((preds==1).int()+(label==0).int())==2)
             
-            SE = float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6)   
-            PC = float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6)
+            # TPR = float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6)   # Recall
+            PC = float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6)  #Precision
             SP = float(torch.sum(TN))/(float(torch.sum(TN+FP)) + 1e-6)
             F1 = 2*SE*PC/(SE+PC + 1e-6)
 
+            # FPR = float(torch.sum(FP))/(float(torch.sum(FP+TN)) + 1e-6)   
+            TPR_history.append(float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6))
+            FPR_history.append(float(torch.sum(FP))/(float(torch.sum(FP+TN)) + 1e-6))
+            Precision_history.append(float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6))
             print("TP:%d, TN:%d, FP:%d, FN:%d"%(TP, TN, FP,FN))
             print("Sensitivity:%d,\n Precision:%d,\n Specificity:%d,\n F1:%d"%(SE, PC, SP,F1))
             print('[ (%d ) Loss:  %.3f, train_Acc: %.5f, valid_Loss: %.3f, valid_Acc: %.5f]' %\
@@ -178,25 +156,47 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             history['val_loss'].append(valid_loss/len(val_loader))
             history['val_acc'].append(float(valid_acc)/len(val_loader)/ batch_size)
             # log.write('{:.4f},{:.5f},{:.4f}\n'.format(acc_train, avg_loss_train, acc_dev))
+        
+    plt.figure(1)
+    plt.plot(history['loss'], label="loss")
+    plt.plot(history['val_loss'], label="val_loss")
+    plt.savefig('loss.png')
+    plt.figure(2)
+    plt.plot(history['acc'],label="acc")
+    plt.plot(history['val_acc'],label="val_acc")
+    plt.savefig('acc.png')
+    plt.figure(3)
+    plt.plot()
+    plt.plot(TPR_history, FPR_history)
+    plt.savefig('ROC.png')
+    plt.figure(4)
+    plt.plot(TPR_history, Precision_history)
+    plt.savefig('PR.png')
+
     torch.save(model.state_dict(), './model_{}.pkl'.format(num_epochs))
 
 def test_model(config_file, model, device):
 
-    if os.path.exists('malconv.pkl'):
-        print("restoring malconv.pkl from disk for continuation training...")
-        from keras.models import load_model
-        basemodel = load_model('malconv.pkl')
-        _, maxlen, embedding_size = basemodel.layers[1].output_shape
-        input_dim
-    
-    model.eval()
-    with torch.no_grad():
-        for idx,(data) in enumerate(test_loader):
-            # data, label = data.to(device), label.to(device)
-            data = data.to(device)
-            output = model(data)
-            # loss = F.cross_entropy(output, label)
-            predict = torch.max(output, 1)[1]
+
+    try:
+        assert os.path.exists('malconv.pkl')
+
+        state = torch.load(model_dir,map_location=device)
+        model.load_state_dict(state)
+
+        device = utils.model_to_cuda(model)
+
+        model.eval()
+        with torch.no_grad():
+            for idx,(data) in enumerate(test_loader):
+                # data, label = data.to(device), label.to(device)
+                data = data.to(device)
+                output = model(data)
+                # loss = F.cross_entropy(output, label)
+                predict = torch.max(output, 1)[1]
+    except AssertionError:
+        print("No model")
+        
 
 
 if __name__ == '__main__':

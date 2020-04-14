@@ -31,19 +31,19 @@ class PE(Dataset):
         with open(self.fp_list[idx][0], 'rb') as f:
 
             # print(self.first_n_byte)
-            byte = f.read(self.first_n_byte)
-            hexadecimal = binascii.hexlify(byte)
-            hexadecimal = [hexadecimal[i:i+2] for i in range(0, len(hexadecimal), 2)]
-            tmp = list(map(PE_Dataset.represent_bytes, hexadecimal))
-
+            # byte = f.read(self.first_n_byte)
+            # hexadecimal = binascii.hexlify(byte)
+            # hexadecimal = [hexadecimal[i:i+2] for i in range(0, len(hexadecimal), 2)]
+            bytes_array = np.array(bytearray(f.read()), dtype="uint8")
+            
             # padding with zeroes such that all files will be of the same size
-            if len(tmp) > self.first_n_byte:
-                tmp = tmp[:self.first_n_byte]
+            if len(bytes_array) > self.first_n_byte:
+                bytes_array = bytes_array[:self.first_n_byte]
             else:
-                tmp = tmp + [0] * (self.first_n_byte - len(tmp))
+                bytes_array = bytes_array + [0] * (self.first_n_byte - len(bytes_array))
             # print(len(tmp))
         f.close()
-        return tensor(tmp), tensor(self.fp_list[idx][1])
+        return tensor(bytes_array), tensor(self.fp_list[idx][1])
 
 
 class PE_Dataset(PE):
