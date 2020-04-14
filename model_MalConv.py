@@ -17,19 +17,20 @@ class MalConv(nn.Module):
         self.fc1 = nn.Linear(128, 128)
         self.relu = nn.ReLU()
         self.fc2 = nn.Sequential(
-            nn.Linear(128, 2),
-            nn.Softmax()
-            # ,nn.Sigmoid()
+            nn.Linear(128, 1),
+            nn.Sigmoid()
         )
         self.dropout = nn.Dropout(p=0.3)
 
-        # self.sigmoid = nn.Sigmoid()
+        self.sigmoid = nn.Sigmoid()
         self.softmax = nn.Softmax()
         # self.i2l = {i: l for i, l in enumerate(labels)}
         # self.l2i = {l: i for i, l in self.i2l.iteritems()}
 
     def forward(self, x):
+        x = x.type(torch.cuda.LongTensor)
         x = self.embed(x)
+
         # Channel first
         x = torch.transpose(x, -1, -2)
 
@@ -41,9 +42,6 @@ class MalConv(nn.Module):
         x = self.dropout(x)
 
         x = x.view(-1, 128)
-        # x = self.relu(self.fc1(x))
-        # x = self.fc2(x)
-        # x = self.relu(self.fc2(x))
         x = self.fc1(x)
         x = self.fc2(x)
         return x

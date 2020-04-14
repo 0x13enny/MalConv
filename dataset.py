@@ -1,6 +1,8 @@
 from torch.utils.data import Dataset
 from torch import tensor
+from torch.cuda import LongTensor
 import struct, binascii
+import numpy as np
 class PE(Dataset):
     def __init__(self, fp_list, first_n_byte=2000000):
         """
@@ -40,7 +42,7 @@ class PE(Dataset):
             if len(bytes_array) > self.first_n_byte:
                 bytes_array = bytes_array[:self.first_n_byte]
             else:
-                bytes_array = bytes_array + [0] * (self.first_n_byte - len(bytes_array))
+                bytes_array = np.concatenate([bytes_array, np.zeros(self.first_n_byte - len(bytes_array),dtype='uint8')])
             # print(len(tmp))
         f.close()
         return tensor(bytes_array), tensor(self.fp_list[idx][1])

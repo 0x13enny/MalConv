@@ -3,7 +3,8 @@ import requests
 from lxml import etree
 import re, os
 
-for page in range(13600):
+for page in range(1600,13608):
+>>>>>>> cd8beb58ad6b70e16d17da77f2d912ff6ab17b68
     url = "https://download.cnet.com/s/software/windows/?licenseType=Free&page=%s" %(page)
     resp = requests.get(url)
     html = resp.text
@@ -15,7 +16,9 @@ for page in range(13600):
         A = selector_2.xpath("//*[@id=\"pdl-manual\"]")
         for o in A:
             # print(o.attrib['href'])
-            os.system("wget -O tmp "+re.sub("&","\&",o.attrib['href'])+" ; mv tmp $(md5sum tmp | cut -d' ' -f1)")
+            if o.attrib['href'].endswith("exe"):
+                os.system("wget -O "+re.sub("&","\&",o.attrib['href']))
+                #os.system("wget -O tmp "+re.sub("&","\&",o.attrib['href'])+" ; mv tmp $(md5sum tmp | cut -d' ' -f1)")
             # os.system(" "+re.sub("&","\&",o.attrib['href'])+" ; ")
         # break
             # print("wget -O tmp "+o.attrib["data-download-now-url"]+"; mv tmp $(md5sum tmp | cut -d' ' -f1)")
