@@ -3,7 +3,6 @@ import argparse
 from time import time
 import sys
 import yaml
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -14,13 +13,7 @@ from sklearn.metrics import confusion_matrix
 from torchsummary import summary
 import matplotlib.pyplot as plt
 
-
-
-args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
-torch.manual_seed(args.seed)
-if args.cuda:
-    torch.cuda.manual_seed(args.seed)
+import csv
 
 
 def get_JS(SR,GT,threshold=0.5):
@@ -46,17 +39,21 @@ def get_DC(SR,GT,threshold=0.5):
     return DC
 
 def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
-             batch_size=16, num_workers=2, show_matrix=False):
+             batch_size=8, num_workers=2, show_matrix=False):
     model = model_MalConv.MalConv()
     # print(model.summary())
     device = utils.model_to_cuda(model)
 
-    # if split:
     train_set, test_set = utils.gen_paths()
-    # else:
-    #     train_set, test_set = # load file labels/test_path.csv 
-    # fps_train, y_train = utils.split_to_files_and_labels(train_set)
-    # fps_dev, y_dev = utils.split_to_files_and_labels(dev_set)
+
+#    with open('labels/train_path.csv', newline='') as f:
+#        reader = csv.reader(f)
+#        train_set = list(reader)
+
+
+#    with open('labels/test_path.csv', newline='') as f:
+#        reader = csv.reader(f)
+#        test_set = list(reader)
 
     # transfer data to DataLoader object
     train_loader = DataLoader(PE_Dataset(train_set[:int(len(train_set)*4/5)], first_n_byte),
@@ -84,12 +81,10 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
         valid_acc = 0
 
         model.train()
-
         for batch_data, label in train_loader:
-            print((batch_data.shape))
+            #print((batch_data.shape))
             # print(label.shape)
             optimizer.zero_grad()
-
             if device is not None:
                 batch_data, label = batch_data.to(device), label.to(device)
             output = model(batch_data)
@@ -173,7 +168,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     plt.plot(TPR_history, Precision_history)
     plt.savefig('PR.png')
 
-    torch.save(model.state_dict(), './model_{}.pkl'.format(num_epochs))
+    torch.save(model.state_dict(), './MalConv_{}.pkl'.format(num_epochs))
 
 def test_model(config_file, model, device):
 

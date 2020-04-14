@@ -5,7 +5,7 @@ import torch.nn as nn
 import random, os
 import pandas as pd
 
-def gen_paths(benign_dir="../Benign/", malicious_dir="../Malware/"):
+def gen_paths(benign_dir="../externel_disk/PE/Benign/", malicious_dir="../externel_disk/PE/Malware/"):
     """
     output [(exe_path, label), (exe_path, label)...]
     """
@@ -33,7 +33,7 @@ def model_to_cuda(model):
     
     device = None
     if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-        device = torch.device("cuda:1")
+        device = torch.device("cuda:0")
         model = nn.DataParallel(model)
         model.to(device)
     return device
