@@ -3,7 +3,7 @@ import requests
 from lxml import etree
 import re, os
 
-for page in range(1000000,1000001):
+for page in range(13600):
     url = "https://download.cnet.com/s/software/windows/?licenseType=Free&page=%s" %(page)
     resp = requests.get(url)
     html = resp.text
