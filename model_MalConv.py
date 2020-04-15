@@ -16,10 +16,9 @@ class MalConv(nn.Module):
 
         self.fc1 = nn.Linear(128, 128)
         self.relu = nn.ReLU()
-        self.fc2 = nn.Sequential(
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
+        self.fc2 = nn.Linear(128, 1)
+        self.sigmoid = nn.Sigmoid()
+        
         self.dropout = nn.Dropout(p=0.3)
 
         self.sigmoid = nn.Sigmoid()
@@ -39,9 +38,9 @@ class MalConv(nn.Module):
 
         x = self.relu(cnn_value * gating_weight)
         x = self.pooling(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         x = x.view(-1, 128)
-        x = self.fc1(x)
-        x = self.fc2(x)
+        x = (self.fc1(x))
+        x = (self.fc2(x))
         return x

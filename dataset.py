@@ -45,7 +45,7 @@ class PE(Dataset):
                 bytes_array = np.concatenate([bytes_array, np.zeros(self.first_n_byte - len(bytes_array),dtype='uint8')])
             # print(len(tmp))
         f.close()
-        return tensor(bytes_array), tensor(self.fp_list[idx][1])
+        return tensor(bytes_array), tensor(float(self.fp_list[idx][1]))
 
 
 class PE_Dataset(PE):
