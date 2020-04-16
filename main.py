@@ -44,16 +44,16 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     # print(model.summary())
     device = utils.model_to_cuda(model)
 
-    #train_set, test_set = utils.gen_paths()
+    train_set, test_set = utils.gen_paths()
 
-    with open('labels/train_path.csv', newline='') as f:
-        reader = csv.reader(f)
-        train_set = list(reader)
+#    with open('labels/train_path.csv', newline='') as f:
+#        reader = csv.reader(f)
+#        train_set = list(reader)
 
 
-    with open('labels/test_path.csv', newline='') as f:
-        reader = csv.reader(f)
-        test_set = list(reader)
+#    with open('labels/test_path.csv', newline='') as f:
+#        reader = csv.reader(f)
+#        test_set = list(reader)
 
     # transfer data to DataLoader object
     #train_set = train_set[:int(len(train_set)/100)]
