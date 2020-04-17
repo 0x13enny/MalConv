@@ -39,7 +39,7 @@ def get_DC(SR,GT,threshold=0.5):
     return DC
 
 def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
-             batch_size=8, num_workers=2, show_matrix=False):
+             batch_size=32, num_workers=2, show_matrix=False):
     model = model_MalConv.MalConv()
     # print(model.summary())
     device = utils.model_to_cuda(model)
@@ -56,6 +56,8 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
 #        test_set = list(reader)
 
     # transfer data to DataLoader object
+    #train_set = train_set[:int(len(train_set)/100)]
+    #test_set = test_set[:int(len(test_set)/100)]
     train_loader = DataLoader(PE_Dataset(train_set[:int(len(train_set)*4/5)], first_n_byte),
                             batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(PE_Dataset(train_set[int(len(train_set)*4/5):], first_n_byte),
@@ -130,16 +132,17 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
                 FP += torch.sum(((preds==1).int()+(label==0).int())==2)
             
             # TPR = float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6)   # Recall
-            PC = float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6)  #Precision
-            SP = float(torch.sum(TN))/(float(torch.sum(TN+FP)) + 1e-6)
+            PC = float(TP/(TP+FP + 1e-6))  #Precision
+            SP = float(TN/(TN+FP + 1e-6))
+            SE = float(TP/(TP+FN + 1e-6))
             F1 = 2*SE*PC/(SE+PC + 1e-6)
 
             # FPR = float(torch.sum(FP))/(float(torch.sum(FP+TN)) + 1e-6)   
-            TPR_history.append(float(torch.sum(TP))/(float(torch.sum(TP+FN)) + 1e-6))
-            FPR_history.append(float(torch.sum(FP))/(float(torch.sum(FP+TN)) + 1e-6))
-            Precision_history.append(float(torch.sum(TP))/(float(torch.sum(TP+FP)) + 1e-6))
+            TPR_history.append(float(TP)/(float(TP+FN) + 1e-6))
+            FPR_history.append(float(FP)/(float(FP+TN) + 1e-6))
+            Precision_history.append(float(TP)/(float(TP+FP) + 1e-6))
             print("TP:%d, TN:%d, FP:%d, FN:%d"%(TP, TN, FP,FN))
-            print("Sensitivity:%d,\n Precision:%d,\n Specificity:%d,\n F1:%d"%(SE, PC, SP,F1))
+            print("Sensitivity:%f,\n Precision:%f,\n Specificity:%f,\n F1:%f"%(SE, PC, SP,F1))
             print('[ (%d ) Loss:  %.3f, train_Acc: %.5f, valid_Loss: %.3f, valid_Acc: %.5f]' %\
                     (epoch, epoch_loss/len(train_loader), \
                     float(epoch_acc) / len(train_loader) / batch_size,\
@@ -161,7 +164,6 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     plt.plot(history['val_acc'],label="val_acc")
     plt.savefig('acc.png')
     plt.figure(3)
-    plt.plot()
     plt.plot(TPR_history, FPR_history)
     plt.savefig('ROC.png')
     plt.figure(4)
