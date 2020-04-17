@@ -1,0 +1,30 @@
+TP:19983, TN:6057, FP:580, FN:575
+Sensitivity:0.972030,
+ Precision:0.971794,
+ Specificity:0.912611,
+ F1:0.971912
+[ (0 ) Loss:  0.164, train_Acc: 0.93622, valid_Loss: 0.116, valid_Acc: 0.95735]
+TP:20374, TN:5540, FP:1097, FN:184
+Sensitivity:0.991050,
+ Precision:0.948908,
+ Specificity:0.834714,
+ F1:0.969521
+[ (1 ) Loss:  0.076, train_Acc: 0.97296, valid_Loss: 0.158, valid_Acc: 0.95272]
+TP:20388, TN:5605, FP:1032, FN:170
+Sensitivity:0.991731,
+ Precision:0.951821,
+ Specificity:0.844508,
+ F1:0.971365
+[ (2 ) Loss:  0.044, train_Acc: 0.98510, valid_Loss: 0.158, valid_Acc: 0.95562]
+TP:20226, TN:6018, FP:619, FN:332
+Sensitivity:0.983851,
+ Precision:0.970305,
+ Specificity:0.906735,
+ F1:0.977030
+[ (3 ) Loss:  0.033, train_Acc: 0.98944, valid_Loss: 0.134, valid_Acc: 0.96485]
+TP:19974, TN:6246, FP:391, FN:584
+Sensitivity:0.971593,
+ Precision:0.980800,
+ Specificity:0.941088,
+ F1:0.976174
+[ (4 ) Loss:  0.029, train_Acc: 0.99141, valid_Loss: 0.148, valid_Acc: 0.96397]
