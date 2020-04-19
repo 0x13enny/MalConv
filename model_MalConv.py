@@ -35,12 +35,38 @@ class MalConv(nn.Module):
 
         cnn_value = self.conv1(x.narrow(-2, 0, 4))
         gating_weight = self.sigmoid(self.conv2(x.narrow(-2, 4, 4)))
-
+    
         x = self.relu(cnn_value * gating_weight)
+        
+        # register the hook 
+        h = x.register_hook(self.activations_hook)
         x = self.pooling(x)
         #x = self.dropout(x)
-
+       
+        
         x = x.view(-1, 128)
         x = (self.fc1(x))
         x = (self.fc2(x))
+
+        return x
+
+    def activations_hook(self, grad): 
+        self.gradients = grad
+        
+    def get_activations_gradient(self): 
+        return self.gradients
+        
+    def get_activations(self, x):
+        x = x.type(torch.cuda.LongTensor)
+        x = self.embed(x)
+
+        # Channel first
+        x = torch.transpose(x, -1, -2)
+
+        cnn_value = self.conv1(x.narrow(-2, 0, 4))
+        gating_weight = self.sigmoid(self.conv2(x.narrow(-2, 4, 4)))
+    
+        x = self.relu(cnn_value * gating_weight)
+        
+        x = self.pooling(x)
         return x
