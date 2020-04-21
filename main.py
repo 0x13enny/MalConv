@@ -1,5 +1,5 @@
 from __future__ import print_function
-import argparse
+import argparse, os
 from time import time
 import sys
 import yaml
@@ -12,7 +12,11 @@ import utils
 from sklearn.metrics import confusion_matrix
 from torchsummary import summary
 import matplotlib.pyplot as plt
-
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import f1_score
+from sklearn.metrics import auc
 import csv
 
 
@@ -51,10 +55,6 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
 #        train_set = list(reader)
 
 
-#    with open('labels/test_path.csv', newline='') as f:
-#        reader = csv.reader(f)
-#        test_set = list(reader)
-
     # transfer data to DataLoader object
     #train_set = train_set[:int(len(train_set)/100)]
     #test_set = test_set[:int(len(test_set)/100)]
@@ -65,7 +65,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     test_loader = DataLoader(PE_Dataset(test_set, first_n_byte),
                              batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss()
     #optimizer = torch.optim.SparseAdam(model.parameters(), lr)
     optimizer = torch.optim.Adam(model.parameters(), lr)
     
@@ -90,13 +90,13 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             if device is not None:
                 batch_data, label = batch_data.to(device), label.to(device)
             output = model(batch_data)
-            #print(label)
-            
+            print(output)
             loss = criterion(output, label)
             loss.backward()
             optimizer.step()
             epoch_loss += loss
             preds = (output>0.5).float()
+
             
             #print(get_sensitivity(output, label))
             #print(get_specificity(output, label))
@@ -172,25 +172,37 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
 
     torch.save(model.state_dict(), './MalConv_{}.pkl'.format(num_epochs))
 
-def test_model(config_file, model, device):
+def test_model():
+    first_n_byte = 2000000
+    num_workers = 2
+    batch_size = 32
+    model = model_MalConv.MalConv()
+    device = utils.model_to_cuda(model)
 
-
+    with open('labels/test_path.csv', newline='') as f:
+       reader = csv.reader(f)
+       test_set = list(reader)
+       test_set = test_set[1:]
+    test_loader = DataLoader(PE_Dataset(test_set, first_n_byte),
+                                 batch_size=batch_size, shuffle=False, num_workers=num_workers)
     try:
-        assert os.path.exists('malconv.pkl')
-
+        testy = []
+        prob = []
+        assert os.path.exists('MalConv_5.pkl')
+        model_dir = 'MalConv_5.pkl'
         state = torch.load(model_dir,map_location=device)
         model.load_state_dict(state)
 
-        device = utils.model_to_cuda(model)
-
         model.eval()
         with torch.no_grad():
-            for idx,(data) in enumerate(test_loader):
-                # data, label = data.to(device), label.to(device)
-                data = data.to(device)
-                output = model(data)
+
+            for batch_data, label in test_loader:
+                if device is not None:
+                    batch_data, label = batch_data.to(device), label.to(device)
+                output = model(batch_data)
                 # loss = F.cross_entropy(output, label)
-                predict = torch.max(output, 1)[1]
+                print(output)
+                sys.exit(1)
     except AssertionError:
         print("No model")
         
@@ -198,3 +210,4 @@ def test_model(config_file, model, device):
 
 if __name__ == '__main__':
     train()
+    #test_model()

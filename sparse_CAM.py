@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torchvision import models, transforms
 from model_MalConv import *
 import pefile
+import csv, sys
 
 # choose some test data (300?) to perform sparse-CAM
 
@@ -31,11 +32,25 @@ model.eval()
 # images = torch.stack(images).to(device)
 first_n_byte = 2000000
 # pe =  pefile.PE("putty.exe", fast_load=True)
-result = {}
-file_samples = ["processhacker-2.39-setup.exe"]
-for sample in file_samples:
+B_result = {'not_PE':0}
+M_result = {'not_PE':0}
+with open('labels/test_path.csv', newline='') as f:
+    reader = csv.reader(f)
+    file_samples = list(reader)
+
+#print(len(file_samples))
+#sys.exit(1)
+for sample, label in file_samples[1:500]:
     
-    pe =  pefile.PE(sample)
+    label = int(float(label))
+    try:
+        pe =  pefile.PE(sample)
+    except pefile.PEFormatError:
+        if label:
+            M_result['not_PE']+=1
+        else:
+            B_result['not_PE']+=1
+        continue
     with open(sample, 'rb') as f:
     # with open("putty.exe", 'rb') as f:
         bytes_array = np.array(bytearray(f.read()), dtype="uint8")
@@ -72,10 +87,15 @@ for sample in file_samples:
             else:
                 target = sect.Name
             try:
-                result[target]+=1
+                if label:
+                    M_result[target]+=1
+                else:
+                    B_result[target]+=1
             except KeyError:
-                result[target]=1
-print(result)
-for i in pe.sections:
-    
-    print(i.Name)
+                if label:
+                    M_result[target]=1
+                else:
+                    B_result[target]=1
+print({k: v for k, v in sorted(M_result.items(), key=lambda item: item[1])})
+print({k: v for k, v in sorted(B_result.items(), key=lambda item: item[1])})
+E

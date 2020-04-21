@@ -32,10 +32,6 @@ class PE(Dataset):
     def __getitem__(self, idx):
         with open(self.fp_list[idx][0], 'rb') as f:
 
-            # print(self.first_n_byte)
-            # byte = f.read(self.first_n_byte)
-            # hexadecimal = binascii.hexlify(byte)
-            # hexadecimal = [hexadecimal[i:i+2] for i in range(0, len(hexadecimal), 2)]
             bytes_array = np.array(bytearray(f.read()), dtype="uint8")
             
             # padding with zeroes such that all files will be of the same size
@@ -45,7 +41,11 @@ class PE(Dataset):
                 bytes_array = np.concatenate([bytes_array, np.zeros(self.first_n_byte - len(bytes_array),dtype='uint8')])
             # print(len(tmp))
         f.close()
-        return tensor(bytes_array), tensor(float(self.fp_list[idx][1]))
+        if self.fp_list[idx][1] == 1.0:
+            label = [0.0,1.0] # malicious
+        else:
+            label = [1.0,0.0] # benign
+        return tensor(bytes_array), tensor(label)
 
 
 class PE_Dataset(PE):
@@ -59,4 +59,4 @@ class PE_Dataset(PE):
     def __getitem__(self, idx):
         x, label = super(PE_Dataset, self).__getitem__(idx)
         # print(label)
-        return x, tensor([label])
+        return x, label
