@@ -36,7 +36,8 @@ class MalConv(nn.Module):
         cnn_value = self.conv1(x.narrow(-2, 0, 4))
         gating_weight = self.sigmoid(self.conv2(x.narrow(-2, 4, 4)))
     
-        x = self.relu(cnn_value * gating_weight)
+        x = self.relu(cnn_value)
+        x = x * gating_weight
         
         # register the hook 
         #h = x.register_hook(self.activations_hook)
@@ -45,9 +46,9 @@ class MalConv(nn.Module):
        
         
         x = x.view(-1, 128)
-        x = (self.fc1(x))
-        x = self.softmax(self.fc2(x))
-
+        x = self.relu(self.fc1(x))
+        x = self.sigmoid(self.fc2(x))
+        # print(x)
         return x
 
     def activations_hook(self, grad): 

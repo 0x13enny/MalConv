@@ -1,14 +1,10 @@
 from __future__ import print_function
-import argparse, os
+import argparse, os, sys, yaml, torch
 from time import time
-import sys
-import yaml
-import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataset import PE, PE_Dataset
-import model_MalConv
-import utils
+import model_MalConv, utils
 from sklearn.metrics import confusion_matrix
 from torchsummary import summary
 import matplotlib.pyplot as plt
@@ -17,53 +13,60 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import f1_score
 from sklearn.metrics import auc
+import torch.multiprocessing as mp 
+import torch.distributed as dist
 import csv
 
-
-def get_JS(SR,GT,threshold=0.5):
-    # JS : Jaccard similarity
-    SR = SR > threshold
-    GT = GT == torch.max(GT)
-    
-    Inter = torch.sum((SR+GT)==2)
-    Union = torch.sum((SR+GT)>=1)
-    
-    JS = float(Inter)/(float(Union) + 1e-6)
-    
-    return JS
-
-def get_DC(SR,GT,threshold=0.5):
-    # DC : Dice Coefficient
-    SR = SR > threshold
-    GT = GT == torch.max(GT)
-
-    Inter = torch.sum((SR+GT)==2)
-    DC = float(2*Inter)/(float(torch.sum(SR)+torch.sum(GT)) + 1e-6)
-
-    return DC
-
-def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
-             batch_size=32, num_workers=2, show_matrix=False):
+def train(cross):
+    ############################################################
+    # rank = args.nr * args.gpus + gpu                              
+    # dist.init_process_group(backend='nccl',                     
+    #                         init_method='env://',
+    #                         world_size=args.world_size,         
+    #                         rank=rank)
+    ############################################################
+    lr=1e-3
+    first_n_byte=2000000
+    num_epochs=5
+    batch_size=40 # 40 for 2 gpu
+    num_workers= 2
     model = model_MalConv.MalConv()
-    # print(model.summary())
+    # torch.cuda.set_device(gpu)
+    # model.cuda(gpu)
+    # rank = 0
+    # world_size = 2
     device = utils.model_to_cuda(model)
 
-    train_set, test_set = utils.gen_paths()
+    # train_set, test_set = utils.gen_paths()
 
-#    with open('labels/train_path.csv', newline='') as f:
-#        reader = csv.reader(f)
-#        train_set = list(reader)
+    with open('labels/train_path.csv', newline='') as f:
+        reader = csv.reader(f)
+        train_set = list(reader)
+        
+        train_set = train_set[1:]
 
+    # model = nn.parallel.DistributedDataParallel(model,
+    #                                             device_ids=[gpu])
+    train_dataset = PE_Dataset(train_set[:int(len(train_set)*(4-cross)/5)]+train_set[int(len(train_set)*(5-cross)/5):], first_n_byte)
+    val_dataset = PE_Dataset(train_set[int(len(train_set)*(4-cross)/5):int(len(train_set)*(5-cross)/5)], first_n_byte)
+    # test_dataset = PE_Dataset(test_set, first_n_byte)
+    
+    # train_sampler = torch.utils.data.distributed.DistributedSampler(
+    # 	train_dataset,
+    # 	num_replicas=args.world_size,
+    # 	rank=rank
+    # )
+    # val_sampler = torch.utils.data.distributed.DistributedSampler(
+    #     val_dataset,
+    #     num_replicas=args.world_size,
+    #     rank=rank
+    # )
 
     # transfer data to DataLoader object
-    #train_set = train_set[:int(len(train_set)/100)]
-    #test_set = test_set[:int(len(test_set)/100)]
-    train_loader = DataLoader(PE_Dataset(train_set[:int(len(train_set)*4/5)], first_n_byte),
-                            batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(PE_Dataset(train_set[int(len(train_set)*4/5):], first_n_byte),
-                            batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    test_loader = DataLoader(PE_Dataset(test_set, first_n_byte),
-                             batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset,
+                            batch_size=batch_size, shuffle=False, num_workers=num_workers)#, pin_memory=True, sampler=train_sampler)
+    val_loader = DataLoader(val_dataset,
+                            batch_size=batch_size, shuffle=False, num_workers=num_workers)#, pin_memory=True, sampler=val_sampler)
 
     criterion = nn.BCELoss()
     #optimizer = torch.optim.SparseAdam(model.parameters(), lr)
@@ -76,7 +79,9 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     TPR_history = []
     FPR_history = []
     Precision_history = []
+    # print("ready")
     for epoch in range(num_epochs):
+        # print("start training")
         epoch_loss = 0
         epoch_acc = 0
         valid_acc = 0
@@ -84,24 +89,26 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
 
         model.train()
         for batch_data, label in train_loader:
-            #print((batch_data.shape))
-            # print(label.shape)
             optimizer.zero_grad()
-            if device is not None:
-                batch_data, label = batch_data.to(device), label.to(device)
+            batch_data, label = batch_data.to(device), label.to(device)
+            # batch_data, label = batch_data.cuda(non_blocking=True), label.cuda(non_blocking=True)
             output = model(batch_data)
-            print(output)
+            # print(output)
+            # print(torch.cuda.current_device())
             loss = criterion(output, label)
             loss.backward()
             optimizer.step()
             epoch_loss += loss
-            preds = (output>0.5).float()
+            #preds = (output>0.5).float()
 
+            _, preds = torch.max(output, 1)
+            _, label = torch.max(label, 1)
             
             #print(get_sensitivity(output, label))
             #print(get_specificity(output, label))
+            # print(label)
+            # print(preds)
             epoch_acc += torch.sum(label == preds)
-
 
             total_step += 1
 
@@ -114,18 +121,18 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             valid_acc = 0
             valid_loss = 0
             for batch_data, label in val_loader:
-                if device is not None:
-                    batch_data, label = batch_data.to(device), label.to(device)
+                batch_data, label = batch_data.to(device), label.to(device)
+                # batch_data, label = batch_data.cuda(non_blocking=True), label.cuda(non_blocking=True)
 
                 optimizer.zero_grad()
                 output = model(batch_data)
                 loss = criterion(output, label)
-                #_, preds = torch.max(output_label.data, 1)
                 valid_loss += loss
-                preds = (output>0.5).float()
+                _, preds = torch.max(output, 1)
+                _, label = torch.max(label, 1)
+ 
                 valid_acc += torch.sum(preds == label)
-                preds = preds > 0.5
-                label = label == torch.max(label)
+                #label = label == torch.max(label)
                 TP += torch.sum(((preds==1).int()+(label==1).int())==2)
                 FN += torch.sum(((preds==0).int()+(label==1).int())==2)
                 TN += torch.sum(((preds==0).int()+(label==0).int())==2)
@@ -141,8 +148,9 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             TPR_history.append(float(TP)/(float(TP+FN) + 1e-6))
             FPR_history.append(float(FP)/(float(FP+TN) + 1e-6))
             Precision_history.append(float(TP)/(float(TP+FP) + 1e-6))
+            print("========Cross_{}========".format(cross))
             print("TP:%d, TN:%d, FP:%d, FN:%d"%(TP, TN, FP,FN))
-            print("Sensitivity:%f,\n Precision:%f,\n Specificity:%f,\n F1:%f"%(SE, PC, SP,F1))
+            print("Recall:%f,\n Precision:%f,\n Specificity:%f,\n F1:%f"%(SE, PC, SP,F1))
             print('[ (%d ) Loss:  %.3f, train_Acc: %.5f, valid_Loss: %.3f, valid_Acc: %.5f]' %\
                     (epoch, epoch_loss/len(train_loader), \
                     float(epoch_acc) / len(train_loader) / batch_size,\
@@ -154,6 +162,7 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
             history['val_loss'].append(valid_loss/len(val_loader))
             history['val_acc'].append(float(valid_acc)/len(val_loader)/ batch_size)
             # log.write('{:.4f},{:.5f},{:.4f}\n'.format(acc_train, avg_loss_train, acc_dev))
+        torch.save(model.state_dict(), './MalConv_small_{}_{}.pkl'.format(cross, epoch))
         
     plt.figure(1)
     plt.plot(history['loss'], label="loss")
@@ -163,51 +172,93 @@ def train(lr=1e-3, first_n_byte=2000000, num_epochs=5, save=None, \
     plt.plot(history['acc'],label="acc")
     plt.plot(history['val_acc'],label="val_acc")
     plt.savefig('acc.png')
-    plt.figure(3)
-    plt.plot(TPR_history, FPR_history)
-    plt.savefig('ROC.png')
-    plt.figure(4)
-    plt.plot(TPR_history, Precision_history)
-    plt.savefig('PR.png')
+    # plt.figure(3)
+    # plt.plot(TPR_history, FPR_history)
+    # plt.savefig('ROC.png')
+    # plt.figure(4)
+    # plt.plot(TPR_history, Precision_history)
+    # plt.savefig('PR.png')
 
-    torch.save(model.state_dict(), './MalConv_{}.pkl'.format(num_epochs))
 
-def test_model():
+def test_model(weight_dir):
     first_n_byte = 2000000
     num_workers = 2
-    batch_size = 32
+    # batch_size = 32
+    batch_size = 1
     model = model_MalConv.MalConv()
+    rank = 0
+    world_size = 2
     device = utils.model_to_cuda(model)
 
-    with open('labels/test_path.csv', newline='') as f:
+    # with open('labels/test_path.csv', newline='') as f:
+    with open('labels/malware.csv', newline='') as f:
        reader = csv.reader(f)
        test_set = list(reader)
-       test_set = test_set[1:]
     test_loader = DataLoader(PE_Dataset(test_set, first_n_byte),
                                  batch_size=batch_size, shuffle=False, num_workers=num_workers)
     try:
-        testy = []
-        prob = []
-        assert os.path.exists('MalConv_5.pkl')
-        model_dir = 'MalConv_5.pkl'
+
+        assert os.path.exists(weight_dir)
+        model_dir = weight_dir
         state = torch.load(model_dir,map_location=device)
         model.load_state_dict(state)
 
         model.eval()
+        TPR = []
+        FPR = []
+        THRESHOLD = []
+        scores = []
         with torch.no_grad():
 
             for batch_data, label in test_loader:
                 if device is not None:
                     batch_data, label = batch_data.to(device), label.to(device)
                 output = model(batch_data)
+                # print(label)
+                label = label.cpu().numpy()[:,1]
+                score = output.cpu().numpy()[:,1]
+
+                scores.append(score)
+                y_pred = [1 if y>0.5 else 0 for y in scores]
+                # fpr, tpr, threshold = roc_curve(label, y_pred)
+                # TPR += tpr
+                # FPR += fpr
+                # THRESHOLD += threshold
+                
                 # loss = F.cross_entropy(output, label)
-                print(output)
-                sys.exit(1)
+                # print(output)
+                # sys.exit(1)
+        # roc_auc = auc(FPR, TPR)
+        # print(roc_auc)
+
     except AssertionError:
         print("No model")
         
+    # with open('labels/mal_test_with_score.csv',"w") as f:
+    #     for i in range(len(test_set)):
+    #         writer = csv.writer(f)
+    #         writer.writerow([test_set[i][0], scores[0][i]])
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--nodes', default=1,
+                        type=int, metavar='N')
+    parser.add_argument('-g', '--gpus', default=1, type=int,
+                        help='number of gpus per node')
+    parser.add_argument('-nr', '--nr', default=0, type=int,
+                        help='ranking within the nodes')
+    parser.add_argument('--epochs', default=2, type=int, 
+                        metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('--multiple-gpu', default=False, type=bool)
+    args = parser.parse_args()
+    args.world_size = args.gpus * args.nodes                #
+    #os.environ['MASTER_ADDR'] = '10.57.23.164'              #
+    #os.environ['MASTER_PORT'] = '8888'                      #
+    mp.spawn(train, nprocs=args.gpus, args=(args,))         #
 
 if __name__ == '__main__':
-    train()
-    #test_model()
+    # main()
+    for i in range(5):
+        train(i)
+    # test_model(sys.argv[1])

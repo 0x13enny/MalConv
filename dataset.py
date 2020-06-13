@@ -1,7 +1,10 @@
 from torch.utils.data import Dataset
 from torch import tensor
 from torch.cuda import LongTensor
-import struct, binascii
+import struct, binascii, sys
+sys.path.append("/home/benny/Research/ember")
+sys.path.append("/home/benny/ember")
+import ember
 import numpy as np
 class PE(Dataset):
     def __init__(self, fp_list, first_n_byte=2000000):
@@ -13,7 +16,6 @@ class PE(Dataset):
         self.fp_list = fp_list
         # self.l2i = l2i ## no use
         self.first_n_byte = first_n_byte
-
     def __len__(self):
         return len(self.fp_list)
 
@@ -33,7 +35,6 @@ class PE(Dataset):
         with open(self.fp_list[idx][0], 'rb') as f:
 
             bytes_array = np.array(bytearray(f.read()), dtype="uint8")
-            
             # padding with zeroes such that all files will be of the same size
             if len(bytes_array) > self.first_n_byte:
                 bytes_array = bytes_array[:self.first_n_byte]
@@ -41,10 +42,13 @@ class PE(Dataset):
                 bytes_array = np.concatenate([bytes_array, np.zeros(self.first_n_byte - len(bytes_array),dtype='uint8')])
             # print(len(tmp))
         f.close()
-        if self.fp_list[idx][1] == 1.0:
+
+        # label = self.fp_list[idx][1]
+        if self.fp_list[idx][1] == "1.0":
             label = [0.0,1.0] # malicious
         else:
             label = [1.0,0.0] # benign
+        
         return tensor(bytes_array), tensor(label)
 
 
