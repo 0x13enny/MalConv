@@ -4,7 +4,6 @@ from lxml import etree
 import re, os
 
 for page in range(1600,13608):
->>>>>>> cd8beb58ad6b70e16d17da77f2d912ff6ab17b68
     url = "https://download.cnet.com/s/software/windows/?licenseType=Free&page=%s" %(page)
     resp = requests.get(url)
     html = resp.text
